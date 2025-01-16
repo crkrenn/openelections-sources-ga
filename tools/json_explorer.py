@@ -6,37 +6,37 @@ import argparse
 
 def analyze_json_structure(json_data, max_items=3):
     """Analyze and print insights about a JSON structure"""
-    
+
     def get_type_info(obj, path="root"):
         """Recursively get information about types and structures"""
         if isinstance(obj, dict):
             print(f"\nKeys at {path}:")
             pprint(list(obj.keys())[:max_items])
             print(f"Total keys: {len(obj)}")
-            
+
             # Sample a few values
             print(f"\nSample values from {path}:")
             for k, v in list(obj.items())[:max_items]:
                 print(f"{k}: {type(v).__name__}")
-                
+
             # Recurse into nested structures
             for k, v in obj.items():
                 if isinstance(v, (dict, list)):
                     get_type_info(v, f"{path}.{k}")
-                    
+
         elif isinstance(obj, list):
             print(f"\nArray at {path}:")
             print(f"Length: {len(obj)}")
-            
+
             # Analyze types in the array
             types = Counter(type(x).__name__ for x in obj)
             print("Value types in array:", dict(types))
-            
+
             # Sample a few items
             if obj:
                 print("\nSample items:")
                 pprint(obj[:max_items])
-                
+
                 # If items are dictionaries, analyze their keys
                 if isinstance(obj[0], dict):
                     key_freq = Counter(k for d in obj for k in d.keys())
@@ -46,13 +46,13 @@ def analyze_json_structure(json_data, max_items=3):
 def analyze_streaming(filename):
     """Analyze a large JSON file using streaming"""
     import ijson  # pip install ijson
-    
+
     with open(filename, 'rb') as f:
         parser = ijson.parse(f)
-        
+
         current_path = []
         structure = {}
-        
+
         for prefix, event, value in parser:
             if event == 'start_map':
                 current_path.append(prefix)
@@ -61,27 +61,27 @@ def analyze_streaming(filename):
             elif event == 'map_key':
                 full_path = '.'.join(filter(None, current_path + [value]))
                 structure[full_path] = None
-                
+
         print("JSON paths found:")
         pprint(list(structure.keys()))
 
 def main():
     parser = argparse.ArgumentParser(description='Analyze JSON file structure')
     parser.add_argument('filename', help='Path to the JSON file to analyze')
-    parser.add_argument('--stream', action='store_true', 
-                      help='Use streaming parser for very large files')
+    parser.add_argument('--no-stream', action='store_true',
+                      help='Disable streaming parser and load entire file into memory')
     parser.add_argument('--max-items', type=int, default=3,
                       help='Maximum number of items to show in samples (default: 3)')
-    
+
     args = parser.parse_args()
-    
+
     try:
-        if args.stream:
-            analyze_streaming(args.filename)
-        else:
+        if args.no_stream:
             with open(args.filename) as f:
                 data = json.load(f)
                 analyze_json_structure(data, args.max_items)
+        else:
+            analyze_streaming(args.filename)
     except FileNotFoundError:
         print(f"Error: File '{args.filename}' not found")
         sys.exit(1)
